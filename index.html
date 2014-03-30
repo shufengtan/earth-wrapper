@@ -1,0 +1,63 @@
+<html>
+<head>
+<script>
+// This is a plain html page that automatically loads pages from earth.nullschool.net
+// periodically so that they can be captured by CamStudio.
+// Written by Shufeng Tan <shufengtan@gmail.com> on March 29, 2014
+var nullschool = "http://earth.nullschool.net";
+var loc_zoom = "/orthographic=-60,40,1600";
+var config = {
+    'wind': {
+        'interval': 3*3600000,
+        'what': "/wind/surface/level"
+    },
+    'ocean': {
+        'interval': 5*86400000,
+        'what': "/ocean/surface/currents",
+    }
+};
+
+function set_url(mode, epoch_ms){
+    var when = new Date(epoch_ms).toISOString().substr(0, 13).replace(/\D/g, '/') + "00Z";
+    var what = config[mode]['what'];
+    var doc_url = document.URL;
+    if (what.match(/surface\/level/)){
+        var match = /(\d{1,3}0hPa)/.exec(doc_url);
+        if (match) {
+            what = what.replace(/surface\/level/, "isobaric/" + match[1]);
+        }
+    }
+    if (doc_url.match(/[#\/]t/)) {
+        what += "/overlay=temp";
+    }
+    match = /[#\/](-?\d{1,3},-?\d{1,2},\d{2,4})/.exec(doc_url);
+    if (match) {
+      loc_zoom = "/orthographic=" + match[1];
+    }
+    var url = nullschool + "/#" + when + what + loc_zoom;
+    document.getElementById('mesg').innerHTML = nullschool + "<br/>" + when + "<br/>" + what + "<br/>" + loc_zoom
+    document.getElementById("earth").setAttribute("src", url);
+    //url = document.getElementById("earth").getAttribute("src");
+    //document.getElementById('mesg').innerHTML += "<br/>" + url
+}
+
+function earth(){
+    var url = document.URL
+    var mode = url.match(/[#\/]ocean/) ? 'ocean' : 'wind';
+    var match = /[#\/](\d+)d/i.exec(url);
+    var days = match ? match[1] : 10;
+    var epoch_ms = Date.now();
+    var interval = config[mode]['interval'];
+    epoch_ms -= (epoch_ms%interval + days*86400000);
+    set_url(mode, epoch_ms);
+    var I = 0;
+    var Imax = days * 86400000 / interval;
+    setInterval(function(){I+=1;if(I>Imax){return false}set_url(mode, epoch_ms+interval*I)}, 7000);
+}
+</script>
+</head>
+<body style="margin:0;padding:0" onLoad="earth()">
+<div id="mesg" style="color:#00cc00;position:absolute;top:1;left:2"></div>
+<iframe id="earth" width="99.5%" height="99.2%">
+</body>
+</html>
